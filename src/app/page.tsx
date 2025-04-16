@@ -14,7 +14,7 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-4 text-primary">
         QR Pal
       </h1>
-      <Tabs defaultvalue="scan" className="w-[400px]">
+      <Tabs defaultValue="scan" className="w-[400px]">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="scan">Scan</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
@@ -33,3 +33,4 @@ export default function Home() {
     </div>
   );
 }
+
