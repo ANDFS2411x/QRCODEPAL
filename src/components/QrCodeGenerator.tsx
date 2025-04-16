@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import QRCode from 'qrcode';
+import qrcode from 'qrcode';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,7 @@ const QrCodeGenerator = () => {
 
   const generateQrCode = async () => {
     try {
-      const qrCodeDataURL = await QRCode.toDataURL(qrText);
+      const qrCodeDataURL = await qrcode.toDataURL(qrText);
       setQrCode(qrCodeDataURL);
       toast({
         title: 'QR Code Generated',
@@ -41,7 +41,7 @@ const QrCodeGenerator = () => {
       <Button onClick={generateQrCode}>Generate QR Code</Button>
       {qrCode && (
         <div className="mt-4">
-          <QRCode value={qrText} size={256} level={"H"} />
+          <img src={qrCode} alt="QR Code" />
         </div>
       )}
     </div>
