@@ -4,11 +4,9 @@ import QrCodeScanner from '@/components/QrCodeScanner';
 import QrCodeHistory from '@/components/QrCodeHistory';
 import QrCodeGenerator from '@/components/QrCodeGenerator';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
-import {useToast} from "@/hooks/use-toast";
 import {Toaster} from "@/components/ui/toaster";
 
 export default function Home() {
-  const {toast} = useToast();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2">

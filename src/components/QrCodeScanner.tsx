@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { BrowserQRCodeReader } from '@zxing/library';
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { categorizeQrCodeContent } from "@/lib/qr-code-utils";
+import { useRouter } from "next/navigation";
 
 const QrCodeScanner = () => {
   const [result, setResult] = useState<string | null>(null);
@@ -12,6 +13,7 @@ const QrCodeScanner = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const {toast} = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -36,20 +38,18 @@ const QrCodeScanner = () => {
     getCameraPermission();
   }, [toast]);
 
-  const handleScan = useCallback(async () => {
+  const scanQrCode = useCallback(async () => {
+    if (!hasCameraPermission) {
+      return;
+    }
+
     const codeReader = new BrowserQRCodeReader();
 
     try {
-      const result = await codeReader.decodeFromInputVideoDevice(undefined, 'video');
-      setResult(result.text);
-      setError(null);
-      if (navigator.vibrate) {
-        navigator.vibrate(200); // Vibrate for 200ms
+      if (videoRef.current) {
+        const result = await codeReader.decodeFromInputVideoDevice(undefined, videoRef.current);
+        handleScanResult(result.text);
       }
-      toast({
-        title: 'QR Code Scanned',
-        description: 'Successfully scanned QR code.',
-      });
     } catch (err: any) {
       setError(err.message);
       setResult(null);
@@ -59,18 +59,57 @@ const QrCodeScanner = () => {
         description: `Error scanning QR code: ${err.message}`,
       });
     }
-  }, [toast]);
+  }, [hasCameraPermission, toast]);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (hasCameraPermission && videoRef.current) {
+      intervalId = setInterval(scanQrCode, 1000); // Check every 1 second
+    }
+
+    return () => clearInterval(intervalId);
+  }, [hasCameraPermission, scanQrCode]);
+
+  const handleScanResult = (decodedText: string) => {
+    setResult(decodedText);
+    setError(null);
+
+    if (navigator.vibrate) {
+      navigator.vibrate(200); // Vibrate for 200ms
+    }
+
+    const category = categorizeQrCodeContent(decodedText);
+
+    // Store the scanned QR code data with the determined category
+    saveScanResult(decodedText, category);
+
+    toast({
+      title: 'QR Code Scanned',
+      description: `Successfully scanned QR code. Category: ${category}`,
+    });
+    router.refresh();
+  };
+
+
+  const saveScanResult = (data: string, tag: string) => {
+      const id = Date.now().toString();
+      const newItem = { id, data, tag };
+
+      // Retrieve existing history from localStorage
+      const storedHistory = localStorage.getItem('qrHistory');
+      const existingHistory = storedHistory ? JSON.parse(storedHistory) : [];
+
+      // Add the new item to the history
+      const updatedHistory = [newItem, ...existingHistory];
+
+      // Save the updated history back to localStorage
+      localStorage.setItem('qrHistory', JSON.stringify(updatedHistory));
+  };
+
 
   return (
     <div className="flex flex-col items-center">
-      <Button
-        variant="secondary"
-        onClick={handleScan}
-        disabled={!hasCameraPermission}
-      >
-        Scan QR Code
-      </Button>
-
       <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted />
 
       { !(hasCameraPermission) && (
@@ -98,5 +137,3 @@ const QrCodeScanner = () => {
 };
 
 export default QrCodeScanner;
-
-    
