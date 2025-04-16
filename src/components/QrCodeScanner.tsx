@@ -20,6 +20,7 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({ isActive }) => {
   const { toast } = useToast();
   const router = useRouter();
   const isVisible = useIsVisible();
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -50,22 +51,22 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({ isActive }) => {
         stream.getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
         setHasCameraPermission(false);
+        setIsScanning(false);
       }
     }
   }, [isActive, toast, isVisible]);
 
   const scanQrCode = useCallback(async () => {
-    if (!hasCameraPermission) {
+    if (!hasCameraPermission || !videoRef.current || isScanning) {
       return;
     }
 
+    setIsScanning(true);
     const codeReader = new BrowserQRCodeReader();
 
     try {
-      if (videoRef.current) {
-        const result = await codeReader.decodeFromInputVideoDevice(undefined, videoRef.current);
-        handleScanResult(result.text);
-      }
+      const result = await codeReader.decodeFromInputVideoDevice(undefined, videoRef.current);
+      handleScanResult(result.text);
     } catch (err: any) {
       setError(err.message);
       setResult(null);
@@ -74,18 +75,16 @@ const QrCodeScanner: React.FC<QrCodeScannerProps> = ({ isActive }) => {
         title: 'Scan Error',
         description: `Error scanning QR code: ${err.message}`,
       });
+    } finally {
+      setIsScanning(false);
     }
-  }, [hasCameraPermission, toast]);
+  }, [hasCameraPermission, toast, isScanning]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    if (hasCameraPermission && videoRef.current && isActive && isVisible) {
-      intervalId = setInterval(scanQrCode, 1000); // Check every 1 second
+    if (hasCameraPermission && videoRef.current && isActive && isVisible && !isScanning) {
+      scanQrCode();
     }
-
-    return () => clearInterval(intervalId);
-  }, [hasCameraPermission, scanQrCode, isActive, isVisible]);
+  }, [hasCameraPermission, scanQrCode, isActive, isVisible, isScanning]);
 
   const handleScanResult = (decodedText: string) => {
     setResult(decodedText);
