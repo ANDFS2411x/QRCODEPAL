@@ -6,19 +6,25 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { categorizeQrCodeContent } from "@/lib/qr-code-utils";
 import { useRouter } from "next/navigation";
+import { useIsVisible } from "@/hooks/use-is-visible";
 
-const QrCodeScanner = () => {
+interface QrCodeScannerProps {
+  isActive: boolean;
+}
+
+const QrCodeScanner: React.FC<QrCodeScannerProps> = ({ isActive }) => {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
-  const {toast} = useToast();
+  const { toast } = useToast();
   const router = useRouter();
+  const isVisible = useIsVisible();
 
   useEffect(() => {
     const getCameraPermission = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({video: true});
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         setHasCameraPermission(true);
 
         if (videoRef.current) {
@@ -35,8 +41,18 @@ const QrCodeScanner = () => {
       }
     };
 
-    getCameraPermission();
-  }, [toast]);
+    if (isActive && isVisible) {
+      getCameraPermission();
+    } else {
+      // If the component is not active or not visible, clear the camera stream
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+        setHasCameraPermission(false);
+      }
+    }
+  }, [isActive, toast, isVisible]);
 
   const scanQrCode = useCallback(async () => {
     if (!hasCameraPermission) {
@@ -64,12 +80,12 @@ const QrCodeScanner = () => {
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
-    if (hasCameraPermission && videoRef.current) {
+    if (hasCameraPermission && videoRef.current && isActive && isVisible) {
       intervalId = setInterval(scanQrCode, 1000); // Check every 1 second
     }
 
     return () => clearInterval(intervalId);
-  }, [hasCameraPermission, scanQrCode]);
+  }, [hasCameraPermission, scanQrCode, isActive, isVisible]);
 
   const handleScanResult = (decodedText: string) => {
     setResult(decodedText);
@@ -91,36 +107,33 @@ const QrCodeScanner = () => {
     router.refresh();
   };
 
-
   const saveScanResult = (data: string, tag: string) => {
-      const id = Date.now().toString();
-      const newItem = { id, data, tag };
+    const id = Date.now().toString();
+    const newItem = { id, data, tag };
 
-      // Retrieve existing history from localStorage
-      const storedHistory = localStorage.getItem('qrHistory');
-      const existingHistory = storedHistory ? JSON.parse(storedHistory) : [];
+    // Retrieve existing history from localStorage
+    const storedHistory = localStorage.getItem('qrHistory');
+    const existingHistory = storedHistory ? JSON.parse(storedHistory) : [];
 
-      // Add the new item to the history
-      const updatedHistory = [newItem, ...existingHistory];
+    // Add the new item to the history
+    const updatedHistory = [newItem, ...existingHistory];
 
-      // Save the updated history back to localStorage
-      localStorage.setItem('qrHistory', JSON.stringify(updatedHistory));
+    // Save the updated history back to localStorage
+    localStorage.setItem('qrHistory', JSON.stringify(updatedHistory));
   };
-
 
   return (
     <div className="flex flex-col items-center">
       <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted />
 
-      { !(hasCameraPermission) && (
-          <Alert variant="destructive">
-              <AlertTitle>Camera Access Required</AlertTitle>
-              <AlertDescription>
-                Please allow camera access to use this feature.
-              </AlertDescription>
-          </Alert>
-      )
-      }
+      {!(hasCameraPermission) && (
+        <Alert variant="destructive">
+          <AlertTitle>Camera Access Required</AlertTitle>
+          <AlertDescription>
+            Please allow camera access to use this feature.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {result && (
         <div className="mt-4 p-4 border rounded">

@@ -5,8 +5,10 @@ import QrCodeHistory from '@/components/QrCodeHistory';
 import QrCodeGenerator from '@/components/QrCodeGenerator';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Toaster} from "@/components/ui/toaster";
+import {useState} from "react";
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState("scan");
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2">
@@ -14,14 +16,14 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-4 text-primary">
         QR Pal
       </h1>
-      <Tabs defaultValue="scan" className="w-[400px]">
+      <Tabs defaultValue="scan" className="w-[400px]" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="scan">Scan</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="generate">Generate</TabsTrigger>
         </TabsList>
         <TabsContent value="scan" className="mt-4">
-          <QrCodeScanner/>
+          <QrCodeScanner isActive={activeTab === "scan"}/>
         </TabsContent>
         <TabsContent value="history" className="mt-4">
           <QrCodeHistory/>
@@ -33,4 +35,3 @@ export default function Home() {
     </div>
   );
 }
-
